@@ -5,7 +5,9 @@ from flask import request
 import json
 
 app = flask.Flask(__name__)
-
+@app.route("/", methods=["GET","POST"])
+def home():
+    return "Go to /scorecard?match_no=match_no to view the live scorecard of the match"
 
 @app.route("/scorecard", methods=["GET","POST"])
 
