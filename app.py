@@ -57,21 +57,21 @@ def get_result_update(response):
 
 @app.route('/get_all_matches')
 def get_all_matches():
-    
+
     with open("./match_ids.json","r") as f:
         match_ids = json.load(f)
     return match_ids
 
 
-
+@app.route('/get_all_matches_refresh')
 def get_match_ids():
 
     match_ids = {"IPL2021":[]}
     url = "https://www.cricbuzz.com/cricket-series/3472/indian-premier-league-2021/matches"
     cricbuzz_resp = requests.get(url)
     response = HtmlResponse(url = url,body=cricbuzz_resp.text,encoding='utf-8')
-    # with open("matches.html","w") as f:
-    #     f.write(response.text)
+    with open("matches.html","w") as f:
+        f.write(response.text)
     for i in range(3,59):
         match_time = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[2]/div/span[2]/text()').extract()[0].strip()
         # mon,day = match_date.split()[0].strip()
@@ -81,11 +81,16 @@ def get_match_ids():
         # else: 
         #     mon= "5"
         # match_date = day+"/"+mon+"/2021"
+        # //*[@id="series-matches"]/div[3]/div[3]/div[1]/a[2]
+        try:
+            match_result = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[1]/a[2]/text()').extract()[0].strip()
+        except:
+            match_result = "NA"
         match_id = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[1]/a/@href').extract()[0].strip().split('cricket-scores/')[1].split('/')[0]
         match_name = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[1]/a/span/text()').extract()[0].strip()
         match_venue = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[1]/div/text()').extract()[0].strip()
         match_no = i-2
-        match_ids["IPL2021"].append({"match_venue":match_venue,"match_time":match_time,"match_name":match_name,"match_id":match_id,"match_no":match_no})
+        match_ids["IPL2021"].append({"match_venue":match_venue,"match_result":match_result,"match_time":match_time,"match_name":match_name,"match_id":match_id,"match_no":match_no})
     print(match_ids["IPL2021"][55]["match_time"])
     date = 9
     month = 4
