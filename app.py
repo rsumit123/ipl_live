@@ -55,20 +55,66 @@ def get_result_update(response):
 
     return {"winning_team":final_result,"update":result,"winning_margin":margin}
 
+@app.route('/get_all_matches')
+def get_all_matches():
+    
+    with open("./match_ids.json","r") as f:
+        match_ids = json.load(f)
+    return match_ids
+
+
+
 def get_match_ids():
 
     match_ids = {"IPL2021":[]}
     url = "https://www.cricbuzz.com/cricket-series/3472/indian-premier-league-2021/matches"
     cricbuzz_resp = requests.get(url)
     response = HtmlResponse(url = url,body=cricbuzz_resp.text,encoding='utf-8')
+    # with open("matches.html","w") as f:
+    #     f.write(response.text)
     for i in range(3,59):
+        match_time = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[2]/div/span[2]/text()').extract()[0].strip()
+        # mon,day = match_date.split()[0].strip()
+        # day = day.split(',')[0].strip()
+        # if "Apr" in mon:
+        #     mon ="4"
+        # else: 
+        #     mon= "5"
+        # match_date = day+"/"+mon+"/2021"
         match_id = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[1]/a/@href').extract()[0].strip().split('cricket-scores/')[1].split('/')[0]
         match_name = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[1]/a/span/text()').extract()[0].strip()
+        match_venue = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[1]/div/text()').extract()[0].strip()
         match_no = i-2
-        match_ids["IPL2021"].append({"match_name":match_name,"match_id":match_id,"match_no":match_no})
+        match_ids["IPL2021"].append({"match_venue":match_venue,"match_time":match_time,"match_name":match_name,"match_id":match_id,"match_no":match_no})
+    print(match_ids["IPL2021"][55]["match_time"])
+    date = 9
+    month = 4
+    for match in range(0,56):
+        # print(match)
+        if date>30 :
+            date = 1
+            month = 5
+        if "03:30" in match_ids["IPL2021"][match]["match_time"]:
+            match_ids["IPL2021"][match]["match_date"]=str(date)+"/"+str(month)+"/2021"
+            continue
+    
+            
+        else:
+            match_ids["IPL2021"][match]["match_date"]=str(date)+"/"+str(month)+"/2021"
+        date+=1
 
     with open("match_ids.json", "w") as outfile: 
         json.dump(match_ids, outfile)
+    return match_ids
+
+
+
+
+
+
+
+
+    
 
     # return match_ids
 
