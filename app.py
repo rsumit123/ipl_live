@@ -3,6 +3,7 @@ from scrapy.http import HtmlResponse
 import flask
 from flask import request
 import json
+from datetime import datetime
 
 app = flask.Flask(__name__)
 @app.route("/", methods=["GET","POST"])
@@ -70,8 +71,8 @@ def get_match_ids():
     url = "https://www.cricbuzz.com/cricket-series/3472/indian-premier-league-2021/matches"
     cricbuzz_resp = requests.get(url)
     response = HtmlResponse(url = url,body=cricbuzz_resp.text,encoding='utf-8')
-    with open("matches.html","w") as f:
-        f.write(response.text)
+    # with open("matches.html","w") as f:
+    #     f.write(response.text)
     for i in range(3,59):
         match_time = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[2]/div/span[2]/text()').extract()[0].strip()
         # mon,day = match_date.split()[0].strip()
@@ -100,12 +101,12 @@ def get_match_ids():
             date = 1
             month = 5
         if "03:30" in match_ids["IPL2021"][match]["match_time"]:
-            match_ids["IPL2021"][match]["match_date"]=str(date)+"/"+str(month)+"/2021"
+            match_ids["IPL2021"][match]["match_date"]=str("{0:0=2d}".format(date))+"/"+str("{0:0=2d}".format(month))+"/2021"
             continue
     
             
         else:
-            match_ids["IPL2021"][match]["match_date"]=str(date)+"/"+str(month)+"/2021"
+            match_ids["IPL2021"][match]["match_date"]=str("{0:0=2d}".format(date))+"/"+str("{0:0=2d}".format(month))+"/2021"
         date+=1
 
     with open("match_ids.json", "w") as outfile: 
