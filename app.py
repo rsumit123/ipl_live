@@ -1,11 +1,13 @@
 import requests
 from scrapy.http import HtmlResponse
 import flask
+from flask_cors import CORS
 from flask import request
 import json
 from datetime import datetime
 
 app = flask.Flask(__name__)
+CORS(app)
 @app.route("/", methods=["GET","POST"])
 def home():
     return "Go to /scorecard?match_no=match_no to view the live scorecard of the match"

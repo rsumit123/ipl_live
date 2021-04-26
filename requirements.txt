@@ -1,4 +1,5 @@
 Flask==1.1.1
+Flask-Cors==3.0.8
 Scrapy
 requests==2.22.0
 gunicorn==20.0.4
