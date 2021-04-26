@@ -45,13 +45,16 @@ def get_match_id_from_no(match_no):
 #     f.write(response.text)
 def get_result_update(response):
 
-    result = response.xpath('/html/body/div[1]/text()').extract()[0].strip()
+    result = response.xpath('/html/body/div[1]/text()').extract()[0].strip().lower()
     if "won" not in result:
         final_result = "Not Completed"
         margin = "NA"
     else:
-        final_result = result.split('won')[0].strip()
-        margin = result.split('by')[1].strip()
+        try:
+            final_result = result.split('won')[0].replace('(','').replace("match tied","").strip()
+            margin = result.split('by')[1].strip()
+        except:
+            margin = result
 
 
     return {"winning_team":final_result,"update":result,"winning_margin":margin}
