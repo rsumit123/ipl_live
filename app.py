@@ -83,7 +83,20 @@ def get_playing_eleven(response):
         team_two_playing_eleven = response.xpath(f'/html/body/div[4]/div[2]/div[13]/div[2]/a/text()').extract()
         playing_eleven = {team_name_one:team_one_playing_eleven,team_name_two:team_two_playing_eleven}
     except Exception as e:
-        print(e)
+        try:
+            playing_eleven = {}
+            team_name_one = response.xpath(f'/html/body/div[3]/div[2]/div[9]/text()').extract()[0].replace('Squad','').strip()
+            team_one_playing_eleven = response.xpath(f'/html/body/div[3]/div[2]/div[10]/div[2]/a/text()').extract()
+            team_one_playing_eleven = list(map(lambda s:s.replace('(c & wk)',"").replace('(c)','').replace('(wk)','').strip(),team_one_playing_eleven))
+            team_name_two = response.xpath(f'/html/body/div[3]/div[2]/div[12]/text()').extract()[0].replace('Squad','').strip()
+            team_two_playing_eleven = response.xpath(f'/html/body/div[3]/div[2]/div[13]/div[2]/a/text()').extract()
+            team_two_playing_eleven = list(map(lambda s:s.replace('(c & wk)',"").replace('(c)','').replace('(wk)','').strip(),team_two_playing_eleven))
+            playing_eleven = {team_name_one:team_one_playing_eleven,team_name_two:team_two_playing_eleven}
+            print(e)
+        except Exception as e:
+            print(e)
+            playing_eleven = {}
+
     return playing_eleven
 
 def get_toss(response):
@@ -97,7 +110,18 @@ def get_toss(response):
         toss["chose_to"] = chosen_to
 
     except:
-        pass
+        try:
+            toss = {}
+            toss_text = response.xpath('/html/body/div[2]/text()').extract()[0].strip()
+            toss_won_by = toss_text.split('opt to')[0].strip()
+            chosen_to =  toss_text.split('opt to')[1].strip()
+            toss["update"] = toss_text
+            toss["winning_team"] = toss_won_by
+            toss["chose_to"] = chosen_to
+            pass
+        except:
+            toss = {}
+        
     return toss
 
     
