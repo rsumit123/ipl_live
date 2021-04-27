@@ -24,14 +24,86 @@ def get_entire_scorecard():
     url = "https://www.cricbuzz.com/api/html/cricket-scorecard/"+str(match_id)
     cricbuzz_resp = requests.get(url)
     response = HtmlResponse(url = url,body=cricbuzz_resp.text,encoding='utf-8')
+    playing_eleven = get_playing_eleven(response)
+    innings_1_score, innings_2_score = get_scores(response)
+    toss = get_toss(response)
     response_json = {"Innings2":
-                    [{"Batsman":get_batting_scorecard('"innings_2"',response)}, {"Bowlers":get_bowling_scorecard('"innings_2"',response)}],
+                    [{"Batsman":get_batting_scorecard('"innings_2"',response)}, {"Bowlers":get_bowling_scorecard('"innings_2"',response)},innings_2_score],
                 "Innings1":
-                    [{"Batsman":get_batting_scorecard('"innings_1"',response)},{"Bowlers":get_bowling_scorecard('"innings_1"',response)}],
-                "result":get_result_update(response)
+                    [{"Batsman":get_batting_scorecard('"innings_1"',response)},{"Bowlers":get_bowling_scorecard('"innings_1"',response)},innings_1_score],
+                "result":get_result_update(response),
+                "playing_eleven":playing_eleven,
+                "toss_result" : toss
                     }
 
     return response_json
+
+def get_scores(response):
+
+    try:
+        innings_1_score = {}
+        team1 = response.xpath('//*[@id="innings_1"]/div[1]/div[1]/span[1]/text()').extract()[0].replace("Innings","").strip()
+        score1 = response.xpath('//*[@id="innings_1"]/div[1]/div[1]/span[2]/text()').extract()[0].replace("Innings","").strip()
+        innings_1_score["team"]=team1
+        innings_1_score["score"]=score1
+        innings_1_score["runs"] = int(score1.split('-')[0].strip())
+        innings_1_score["wickets"] = int(score1.split('-')[1].split('(')[0].strip())
+        innings_1_score["overs"] = score1.split('(')[1].split(')')[0].replace('Ov','').strip()
+
+
+
+    except:
+        pass
+
+
+    try:
+        innings_2_score = {}
+        team2 = response.xpath('//*[@id="innings_2"]/div[1]/div[1]/span[1]/text()').extract()[0].strip().replace("Innings","").strip()
+        score2 = response.xpath('//*[@id="innings_2"]/div[1]/div[1]/span[2]/text()').extract()[0].strip().replace("Innings","").strip()
+        innings_2_score["team"]=team2
+        innings_2_score["score"]=score2
+        innings_2_score["runs"] = int(score2.split('-')[0].strip())
+        innings_2_score["wickets"] = int(score2.split('-')[1].split('(')[0].strip())
+        innings_2_score["overs"] = score2.split('(')[1].split(')')[0].replace('Ov','').strip()
+    except:
+        pass
+
+    return innings_1_score,innings_2_score
+
+
+
+def get_playing_eleven(response):
+    try:
+        # with open("playing.html","w") as f:
+        #     f.write(response.text)
+        playing_eleven = {}
+        team_name_one = response.xpath(f'/html/body/div[4]/div[2]/div[9]/text()').extract()[0].replace('Squad','').strip()
+        team_one_playing_eleven = response.xpath(f'/html/body/div[4]/div[2]/div[10]/div[2]/a/text()').extract()
+        team_name_two = response.xpath(f'/html/body/div[4]/div[2]/div[12]/text()').extract()[0].replace('Squad','').strip()
+        team_two_playing_eleven = response.xpath(f'/html/body/div[4]/div[2]/div[13]/div[2]/a/text()').extract()
+        playing_eleven = {team_name_one:team_one_playing_eleven,team_name_two:team_two_playing_eleven}
+    except Exception as e:
+        print(e)
+    return playing_eleven
+
+def get_toss(response):
+    try:
+        toss = {}
+        toss_text = response.xpath('/html/body/div[4]/div[2]/div[3]/div[2]/text()').extract()[0].strip()
+        toss_won_by = toss_text.split('won')[0].strip()
+        chosen_to =  toss_text.split('opt to')[1].strip()
+        toss["update"] = toss_text
+        toss["winning_team"] = toss_won_by
+        toss["chose_to"] = chosen_to
+
+    except:
+        pass
+    return toss
+
+    
+
+
+
 
 def get_match_id_from_no(match_no):
 
@@ -77,7 +149,7 @@ def get_match_ids():
     cricbuzz_resp = requests.get(url)
     response = HtmlResponse(url = url,body=cricbuzz_resp.text,encoding='utf-8')
     # with open("matches.html","w") as f:
-    #     f.write(response.text)
+    #     f.write(response.text)    
     for i in range(3,59):
         match_time = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[2]/div/span[2]/text()').extract()[0].strip()
         # mon,day = match_date.split()[0].strip()
