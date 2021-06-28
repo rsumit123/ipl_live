@@ -70,7 +70,7 @@ Data Received
                                     "runs": "10",
                                     "sixes": "0",
                                     "sr": "40.00"
-                                    } ...
+                                    } 
                                 ]
                 },
                     {
