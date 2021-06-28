@@ -7,23 +7,48 @@ import json
 from datetime import datetime
 
 app = flask.Flask(__name__)
+
 CORS(app)
+
+
+
 @app.route("/", methods=["GET","POST"])
+
 def home():
-    return "Go to /scorecard?match_no=match_no to view the live scorecard of the match"
+
+    return "Go to /scorecard?ipl_match_no=match_no to view the live scorecard of the IPL match or go to /scorecard/match_id (where match_id is the match id of cricbuzz) to view live scorecard of any other match"
+
+
+
+
+
+
+
+@app.route('/scorecard/<match_id>')
 
 @app.route("/scorecard", methods=["GET","POST"])
 
-def get_entire_scorecard():
-    match_no = request.args.get('match_no', default = 1, type = int)
+def get_entire_scorecard(match_id=None):
 
-    match_id = get_match_id_from_no(match_no)
-    if match_id==-1:
-        return "Invalid match no"
+    '''
+    Gets the entire scorecard from a match .
+    Usage: /scorecard?ipl_match_no=match_no (for ipl matches) and /scorecard/match_id (Cricbuzz match Id)
+    '''
+    match_no = request.args.get('ipl_match_no', default = None, type = int)
+    if match_no is not None:
+
+        match_id = get_match_id_from_no(match_no)
+        if match_id==-1:
+            return "Invalid match no"
+    else:
+        match_id = match_id
 
     url = "https://www.cricbuzz.com/api/html/cricket-scorecard/"+str(match_id)
+
     cricbuzz_resp = requests.get(url)
+
     response = HtmlResponse(url = url,body=cricbuzz_resp.text,encoding='utf-8')
+
     playing_eleven = get_playing_eleven(response)
     innings_1_score, innings_2_score = get_scores(response)
     toss = get_toss(response)
@@ -39,6 +64,7 @@ def get_entire_scorecard():
     return response_json
 
 def get_scores(response):
+    ''' scrape the innings 1 and innings 2 scores for both the teams '''
 
     try:
         innings_1_score = {}
@@ -73,9 +99,10 @@ def get_scores(response):
 
 
 def get_playing_eleven(response):
+
+    '''Get Playing eleven of both the teams . Only available after the toss is done '''
     try:
-        # with open("playing.html","w") as f:
-        #     f.write(response.text)
+        
         playing_eleven = {}
         team_name_one = response.xpath(f'/html/body/div[4]/div[2]/div[9]/text()').extract()[0].replace('Squad','').strip()
         team_one_playing_eleven = response.xpath(f'/html/body/div[4]/div[2]/div[10]/div[2]/a/text()').extract()
@@ -100,6 +127,8 @@ def get_playing_eleven(response):
     return playing_eleven
 
 def get_toss(response):
+
+    ''' Gets Toss Data . Available after the toss is done '''
     try:
         toss = {}
         toss_text = response.xpath('/html/body/div[4]/div[2]/div[3]/div[2]/text()').extract()[0].strip()
@@ -130,6 +159,7 @@ def get_toss(response):
 
 
 def get_match_id_from_no(match_no):
+    ''' Returns match Ids given a match no (only valid for IPL matches)'''
 
     with open("./match_ids.json","r") as f:
         match_ids = json.load(f)
@@ -139,9 +169,10 @@ def get_match_id_from_no(match_no):
     else:
         return -1
 
-# with open('resp.html') as f:
-#     f.write(response.text)
+
 def get_result_update(response):
+
+    ''' Get winning team and winning margin . Available after the match is completed'''
 
     result = response.xpath('/html/body/div[1]/text()').extract()[0].strip().lower()
     if "won" not in result:
@@ -157,8 +188,13 @@ def get_result_update(response):
 
     return {"winning_team":final_result,"update":result,"winning_margin":margin}
 
+
+
+
 @app.route('/get_all_matches')
 def get_all_matches():
+
+    ''' Returns a list of all IPL matches '''
 
     with open("./match_ids.json","r") as f:
         match_ids = json.load(f)
@@ -166,24 +202,19 @@ def get_all_matches():
 
 
 @app.route('/get_all_matches_refresh')
+
 def get_match_ids():
+
+
 
     match_ids = {"IPL2021":[]}
     url = "https://www.cricbuzz.com/cricket-series/3472/indian-premier-league-2021/matches"
     cricbuzz_resp = requests.get(url)
     response = HtmlResponse(url = url,body=cricbuzz_resp.text,encoding='utf-8')
-    # with open("matches.html","w") as f:
-    #     f.write(response.text)    
+        
     for i in range(3,59):
         match_time = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[2]/div/span[2]/text()').extract()[0].strip()
-        # mon,day = match_date.split()[0].strip()
-        # day = day.split(',')[0].strip()
-        # if "Apr" in mon:
-        #     mon ="4"
-        # else: 
-        #     mon= "5"
-        # match_date = day+"/"+mon+"/2021"
-        # //*[@id="series-matches"]/div[3]/div[3]/div[1]/a[2]
+        
         try:
             match_result = response.xpath(f'//*[@id="series-matches"]/div[{i}]/div[3]/div[1]/a[2]/text()').extract()[0].strip()
         except:
@@ -223,12 +254,14 @@ def get_match_ids():
 
     
 
-    # return match_ids
+    
 
 
 
 
 def get_batting_scorecard(innings,response):
+
+    ''' Returns the batting scorecard of Team '''
 
     batting = []
     for i in range(3,13):
@@ -261,6 +294,8 @@ def get_batting_scorecard(innings,response):
 
 def get_bowling_scorecard(innings,response):
 
+    ''' Returns the bowling scorecard of Team '''
+
     bowling = []
     for i in range(2,13): 
         try:
@@ -291,31 +326,10 @@ def get_bowling_scorecard(innings,response):
 
 
 
-# print(get_batting_scorecard('"innings_1"'))
-# print("================================================")
-# print(get_batting_scorecard('"innings_2"'))
-# print("================================================")
 
-# print(get_bowling_scorecard('"innings_1"'))
-# print("================================================")
-
-# print(get_bowling_scorecard('"innings_2"'))
-# print("===============")
-# print(get_result_update())
-
-
-# response_json = {"Innings2":
-#                     [{"Batsman":get_batting_scorecard('"innings_2"')}, {"Bowlers":get_bowling_scorecard('"innings_2"')}],
-#                 "Innings1":
-#                     [{"Batsman":get_batting_scorecard('"innings_1"')},{"Bowlers":get_bowling_scorecard('"innings_1"')}],
-#                 "result":get_result_update()
-#                     }
-
-
-# get_match_ids()
 
 
 if __name__ == "__main__":
 	print("* Loading..."+"please wait until server has fully started")
 	
-	app.run()
+	app.run(debug=True)
