@@ -59,31 +59,32 @@ Data Received
 
 ```json
 {
-    Innings1: [
+    "Innings1": [
                 {
-                    Batsman: [
+                    "Batsman": [
                                     {
-                                    balls: "25",
-                                    dismissal: "b A Shrubsole",
-                                    fours: "1",
-                                    name: "Smriti Mandhana",
-                                    runs: "10",
-                                    sixes: "0",
-                                    sr: "40.00"
+                                    "balls": "25",
+                                    "dismissal": "b A Shrubsole",
+                                    "fours": "1",
+                                    "name": "Smriti Mandhana",
+                                    "runs": "10",
+                                    "sixes": "0",
+                                    "sr": "40.00"
                                     } ...
                                 ]
+                },
                     {
-                        overs: "50",
-                        runs: 201,
-                        score: "201-8 (50 Ov)",
-                        team: "India Women",
-                        wickets: 8
+                        "overs": "50",
+                        "runs": 201,
+                        "score": "201-8 (50 Ov)",
+                        "team": "India Women",
+                        "wickets": 8
                     }
 
-                }
-    ...
-    playing_eleven: {
-                        England Women: [
+    ],
+    
+    "playing_eleven": {
+                       "England Women": [
                         "Lauren Winfield Hill",
                         "Tammy Beaumont",
                         "Heather Knight (c)",
@@ -96,7 +97,7 @@ Data Received
                         "Anya Shrubsole",
                         "Kate Cross"
                         ],
-                        India Women: [
+                        "India Women": [
                         "Smriti Mandhana",
                         "Shafali Verma",
                         "Punam Raut",
@@ -110,15 +111,15 @@ Data Received
                         "Ekta Bisht"
                         ]
                     },
-    result: {
-            update: "england women won by 8 wkts",
-            winning_margin: "8 wkts",
-            winning_team: "england women"
+    "result": {
+            "update": "england women won by 8 wkts",
+            "winning_margin": "8 wkts",
+            "winning_team": "england women"
         },
-    toss_result: {
-    chose_to: "bowl",
-    update: "England Women won the toss and opt to bowl",
-    winning_team: "England Women"
+    "toss_result": {
+    "chose_to": "bowl",
+    "update": "England Women won the toss and opt to bowl",
+    "winning_team": "England Women"
     }
 }
 ```
