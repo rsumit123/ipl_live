@@ -3,9 +3,9 @@
 
 
 
-[Heroku Deployment](https://cricket-scorecard-2021.herokuapp.com/scorecard/36032)
+[Test the Live API](https://cric-score.skdev.one/scorecard/66190)
 
-This Flask app scrapes live scores , batting , bowling , winning team, playing eleven and Toss data from live ongoing matches in cricbuzz and returns it in a Json format.
+This Flask app scrapes live scores, batting, bowling, winning team, playing eleven and Toss data from live ongoing matches in cricbuzz and returns it in a Json format.
 
 
 ## Features
@@ -33,26 +33,20 @@ This app is built using:
 ## Usage
 
 
-To Get live scorecard of an ongoing match .
+To Get live scorecard of an ongoing match on cricbuzz .
 
 - Go to [cricbuzz](https://www.cricbuzz.com) and find your match
 - Get match id from the URL of the match (a 5 digit no mentioned in the URL)
 - Call the API url with the match id. For example:
 ```sh
-https://cricket-scorecard-2021.herokuapp.com/scorecard/36032
+https://cric-score.skdev.one/scorecard/66190
 ```
-- To get the live scorecard of IPL 2021 you don't need the match Id . Just enter the match no. For Example:
-
-```sh
-https://cricket-scorecard-2021.herokuapp.com/scorecard>ipl_match_no=21
-```
-
 
 ## Sample Data
 
 Request URL:
 ```sh
-https://cricket-scorecard-2021.herokuapp.com/scorecard/36032
+https://cric-score.skdev.one/scorecard/scorecard/36032
 ```
 
 Data Received
