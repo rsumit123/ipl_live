@@ -1,5 +1,10 @@
 import requests
-from scrapy.http import HtmlResponse
+try:
+    from scrapy.http import HtmlResponse
+    SCRAPY_AVAILABLE = True
+except ImportError:
+    SCRAPY_AVAILABLE = False
+    HtmlResponse = None
 import flask
 from flask_cors import CORS
 from flask import request
