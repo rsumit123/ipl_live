@@ -606,6 +606,250 @@ def v2_get_commentary(match_id):
     return {"match_id": match_id, "commentary": commentary, "total_balls": len(commentary)}
 
 
+# =============================================================================
+# V2 Full Commentary - Uses Cricbuzz's internal mcenter API to get complete
+# ball-by-ball commentary for an entire innings (no pagination needed).
+# Endpoints:
+#   /v2/full-commentary/<match_id>/<innings_id>  - full innings commentary
+#   /v2/overs/<match_id>/<innings_id>/<over>      - commentary for a specific over
+#   /v2/ball/<match_id>/<innings_id>/<over>/<ball> - commentary for a specific ball
+# =============================================================================
+
+def v2_fetch_full_commentary(match_id, innings_id):
+    '''Fetch full ball-by-ball commentary from Cricbuzz mcenter API for a given innings'''
+    url = f'https://www.cricbuzz.com/api/mcenter/{match_id}/full-commentary/{innings_id}'
+    r = requests.get(url, headers=V2_HEADERS)
+    if r.status_code != 200:
+        return None
+    try:
+        return r.json()
+    except Exception:
+        return None
+
+
+def v2_parse_commentary_list(raw_data):
+    '''Parse the raw mcenter full-commentary response into a clean list of ball entries'''
+    commentary_entries = raw_data.get('commentary', [])
+    if not commentary_entries:
+        return []
+
+    commentary_list = commentary_entries[0].get('commentaryList', [])
+    balls = []
+
+    for entry in commentary_list:
+        over_number = entry.get('overNumber')
+        # Skip non-ball entries (intro text, strategic timeouts, etc.)
+        if over_number is None:
+            continue
+
+        over = int(over_number)
+        ball = round((over_number - over) * 10)
+
+        comm_text_raw = entry.get('commText', '')
+        comm_text_clean = re.sub(r'<[^>]+>', '', comm_text_raw)
+
+        batsman = entry.get('batsmanStriker', {})
+        bowler = entry.get('bowlerStriker', {})
+
+        ball_entry = {
+            "over": over,
+            "ball": ball,
+            "over_ball": over_number,
+            "innings_id": entry.get('inningsId'),
+            "comm_text": comm_text_clean,
+            "event": entry.get('event', 'NONE'),
+            "runs": entry.get('totalRuns', 0),
+            "batsman": {
+                "name": batsman.get('batName', ''),
+                "runs": batsman.get('batRuns', 0),
+                "balls": batsman.get('batBalls', 0),
+                "fours": batsman.get('batFours', 0),
+                "sixes": batsman.get('batSixes', 0),
+                "sr": batsman.get('batStrikeRate', 0),
+            },
+            "bowler": {
+                "name": bowler.get('bowlName', ''),
+                "overs": bowler.get('bowlOvs', 0),
+                "runs_conceded": bowler.get('bowlRuns', 0),
+                "wickets": bowler.get('bowlWkts', 0),
+                "economy": bowler.get('bowlEcon', 0),
+            },
+            "team_score": entry.get('batTeamScore', 0),
+            "timestamp": entry.get('timestamp'),
+        }
+
+        # Add over summary if present (last ball of an over)
+        over_sep = entry.get('overSeparator')
+        if over_sep:
+            ball_entry["over_summary"] = {
+                "runs": over_sep.get('runs', 0),
+                "score": over_sep.get('score', 0),
+                "wickets": over_sep.get('wickets', 0),
+                "summary": over_sep.get('o_summary', ''),
+            }
+
+        balls.append(ball_entry)
+
+    # Reverse so it's chronological (API returns newest first)
+    balls.reverse()
+    return balls
+
+
+@app.route('/v2/full-commentary/<match_id>/<int:innings_id>')
+def v2_get_full_commentary(match_id, innings_id):
+    '''
+    V2: Returns complete ball-by-ball commentary for an entire innings.
+    Usage: /v2/full-commentary/<match_id>/<innings_id>
+    innings_id: 1 = first innings, 2 = second innings
+    '''
+    if innings_id not in (1, 2, 3, 4):
+        return {"error": "innings_id must be 1, 2, 3 or 4"}, 400
+
+    raw_data = v2_fetch_full_commentary(match_id, innings_id)
+    if raw_data is None:
+        return {"error": "Could not fetch commentary. Check match_id and innings_id."}, 404
+
+    balls = v2_parse_commentary_list(raw_data)
+
+    # Extract match info from the response
+    match_details = raw_data.get('matchDetails', {})
+    match_header = match_details.get('matchHeader', {})
+
+    return {
+        "match_id": match_id,
+        "innings_id": innings_id,
+        "total_balls": len(balls),
+        "match_desc": match_header.get('matchDescription', ''),
+        "status": match_header.get('status', ''),
+        "commentary": balls,
+    }
+
+
+@app.route('/v2/overs/<match_id>/<int:innings_id>/<int:over>')
+def v2_get_over_commentary(match_id, innings_id, over):
+    '''
+    V2: Returns commentary for a specific over.
+    Usage: /v2/overs/<match_id>/<innings_id>/<over>
+    over: 0-indexed (over 0 = first over, over 19 = 20th over in T20)
+    '''
+    if innings_id not in (1, 2, 3, 4):
+        return {"error": "innings_id must be 1, 2, 3 or 4"}, 400
+
+    raw_data = v2_fetch_full_commentary(match_id, innings_id)
+    if raw_data is None:
+        return {"error": "Could not fetch commentary. Check match_id and innings_id."}, 404
+
+    all_balls = v2_parse_commentary_list(raw_data)
+
+    # Filter for the requested over
+    over_balls = [b for b in all_balls if b['over'] == over]
+
+    if not over_balls:
+        return {"error": f"No commentary found for over {over}. Check over number."}, 404
+
+    return {
+        "match_id": match_id,
+        "innings_id": innings_id,
+        "over": over,
+        "total_balls": len(over_balls),
+        "commentary": over_balls,
+    }
+
+
+@app.route('/v2/ball/<match_id>/<int:innings_id>/<int:over>/<int:ball>')
+def v2_get_ball_commentary(match_id, innings_id, over, ball):
+    '''
+    V2: Returns commentary for a specific ball.
+    Usage: /v2/ball/<match_id>/<innings_id>/<over>/<ball>
+    over: 0-indexed, ball: 1-6 for legal deliveries
+    '''
+    if innings_id not in (1, 2, 3, 4):
+        return {"error": "innings_id must be 1, 2, 3 or 4"}, 400
+    if ball < 1 or ball > 6:
+        return {"error": "ball must be between 1 and 6"}, 400
+
+    raw_data = v2_fetch_full_commentary(match_id, innings_id)
+    if raw_data is None:
+        return {"error": "Could not fetch commentary. Check match_id and innings_id."}, 404
+
+    all_balls = v2_parse_commentary_list(raw_data)
+
+    target_over_ball = round(over + ball * 0.1, 1)
+    matching = [b for b in all_balls if b['over_ball'] == target_over_ball]
+
+    if not matching:
+        return {"error": f"No commentary found for over {over}, ball {ball}."}, 404
+
+    return {
+        "match_id": match_id,
+        "innings_id": innings_id,
+        "over": over,
+        "ball": ball,
+        "commentary": matching,
+    }
+
+
+@app.route('/v2/highlights/<match_id>/<int:innings_id>')
+def v2_get_highlights(match_id, innings_id):
+    '''
+    V2: Returns only key events (fours, sixes, wickets, milestones) for an innings.
+    Usage: /v2/highlights/<match_id>/<innings_id>
+    '''
+    if innings_id not in (1, 2, 3, 4):
+        return {"error": "innings_id must be 1, 2, 3 or 4"}, 400
+
+    url = f'https://www.cricbuzz.com/api/mcenter/highlights/{match_id}/{innings_id}'
+    r = requests.get(url, headers=V2_HEADERS)
+    if r.status_code != 200:
+        return {"error": "Could not fetch highlights. Check match_id and innings_id."}, 404
+
+    try:
+        raw_data = r.json()
+    except Exception:
+        return {"error": "Failed to parse highlights data."}, 500
+
+    commentary_list = raw_data.get('commentaryList', [])
+    highlights = []
+
+    for entry in commentary_list:
+        over_number = entry.get('overNumber')
+        if over_number is None:
+            continue
+
+        over = int(over_number)
+        ball = round((over_number - over) * 10)
+
+        comm_text_raw = entry.get('commText', '')
+        comm_text_clean = re.sub(r'<[^>]+>', '', comm_text_raw)
+
+        batsman = entry.get('batsmanStriker', {})
+        bowler = entry.get('bowlerStriker', {})
+
+        highlights.append({
+            "over": over,
+            "ball": ball,
+            "over_ball": over_number,
+            "innings_id": entry.get('inningsId'),
+            "comm_text": comm_text_clean,
+            "event": entry.get('event', ''),
+            "runs": entry.get('totalRuns', 0),
+            "batsman": batsman.get('batName', ''),
+            "bowler": bowler.get('bowlName', ''),
+            "team_score": entry.get('batTeamScore', 0),
+            "timestamp": entry.get('timestamp'),
+        })
+
+    # Reverse to chronological
+    highlights.reverse()
+
+    return {
+        "match_id": match_id,
+        "innings_id": innings_id,
+        "total_events": len(highlights),
+        "highlights": highlights,
+    }
+
+
 if __name__ == "__main__":
 	print("* Loading..."+"please wait until server has fully started")
 
